@@ -1,0 +1,139 @@
+<my-app>loading</my-app>
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Train Seat Booking</title>
+    <style>
+      body {
+        font-family: sans-serif;
+      }
+
+      h1 {
+        text-align: center;
+      }
+
+      #seat-list {
+        list-style-type: none;
+        padding-left: 0;
+      }
+
+      #seat-list li {
+        margin-bottom: 0.5rem;
+      }
+
+      #seat-list li.booked {
+        text-decoration: line-through;
+        color: #888;
+      }
+
+      form {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-top: 1rem;
+      }
+
+      label {
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+      }
+
+      input[type="number"] {
+        width: 4rem;
+        margin-bottom: 0.5rem;
+      }
+
+      button[type="submit"] {
+        background-color: #008CBA;
+        color: white;
+        padding: 0.5rem;
+        border: none;
+        border-radius: 0.25rem;
+        cursor: pointer;
+      }
+
+      button[type="submit"]:hover {
+        background-color: #006E9F;
+      }
+
+      #booking-message {
+        margin-top: 1rem;
+      }
+
+      .error {
+        color: red;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Train Seat Booking</h1>
+    <h2>Available seats:</h2>
+    <ul id="seat-list"></ul>
+    <h2>Book seats:</h2>
+    <form>
+      <label for="numSeats">Number of seats:</label>
+      <input type="number" id="numSeats" name="numSeats" min="1" max="7">
+      <button type="submit">Book</button>
+    </form>
+    <p id="booking-message"></p>
+    <script>
+      const seatList = document.getElementById('seat-list');
+      const bookingForm = document.querySelector('form');
+      const bookingMessage = document.getElementById('booking-message');
+
+      // Populate the seat list
+      fetch('/api/seats')
+        .then(response => response.json())
+        .then(seats => {
+          for (const seat of seats) {
+            const li = document.createElement('li');
+            li.textContent = `Row ${seat.row}, Seat ${seat.seatNumber}`;
+            if (seat.isBooked) {
+              li.classList.add('booked');
+            }
+            seatList.appendChild(li);
+          }
+        });
+
+      // Handle form submission
+      bookingForm.addEventListener('submit', event => {
+        event.preventDefault();
+        const numSeats = parseInt(document.getElementById('numSeats').value, 10);
+        fetch('/api/book', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ numSeats })
+        })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              const bookedSeats = data.seats.map(seat => `Row ${seat.row}, Seat ${seat.seatNumber}`).join(', ');
+              bookingMessage.textContent = `Successfully booked seats: ${bookedSeats}.`;
+              bookingMessage.classList.remove('error');
+              // Refresh the seat list
+              seatList.innerHTML = '';
+              fetch('/api/seats')
+                .then(response => response.json())
+                .then(seats => {
+                  for (const seat of seats) {
+                    const li = document.createElement('li');
+                    li.textContent = 'Row ${seat.row}, Seat ${seat.seatNumber}';
+                    if (seat.isBooked) {
+                      li.style.textDecoration = 'line-through';
+                    }
+                    seatList.appendChild(li);
+                  }
+                });
+            } else {
+              bookingMessage.textContent = data.message;
+            }
+          })
+          .catch(error => {
+            bookingMessage.textContent = 'An error occurred. Please try again.';
+            console.error(error);
+          });
+      });
+    </script>
+  </body>
+</html>
+                    
